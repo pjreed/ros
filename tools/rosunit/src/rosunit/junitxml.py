@@ -46,10 +46,14 @@ import string
 import codecs
 import re
 
+import xml.etree.ElementTree as ET
 from xml.dom.minidom import parse, parseString
 from xml.dom import Node as DomNode
 
 import rospkg
+
+def filter_nonprintable_text(self, text):
+    return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
 
 class TestInfo(object):
     """
@@ -70,15 +74,19 @@ class TestError(TestInfo):
     """
     'error' result container        
     """
-    def xml(self):
-        return u'<error type="%s"><![CDATA[%s]]></error>'%(self.type, self.text)            
+    def xml(self, testcase):
+        error = ET.SubElement(testcase, 'error')
+        error.set('type', self.type)
+        error.text = ET.CDATA(filter_nonprintable_text(self.text))
 
 class TestFailure(TestInfo):
     """
     'failure' result container        
     """
-    def xml(self):
-        return u'<failure type="%s"><![CDATA[%s]]></failure>'%(self.type, self.text)            
+    def xml(self, testcase):
+        error = ET.SubElement(testcase, 'failure')
+        error.set('type', self.type)
+        error.text = ET.CDATA(filter_nonprintable_text(self.text))
 
 
 class TestCaseResult(object):
@@ -154,11 +162,15 @@ class TestCaseResult(object):
         """
         self.errors.append(error)
 
-    def xml(self):
-        return u'  <testcase classname="%s" name="%s" time="%s">\n'%(self.classname, self.name, self.time)+\
-               '\n    '.join([f.xml() for f in self.failures])+\
-               '\n    '.join([e.xml() for e in self.errors])+\
-               '  </testcase>'
+    def xml(self, testsuite):
+        testcase = ET.SubElement(testsuite, 'testcase')
+        testcase.set('classname', self.classname)
+        testcase.set('name', self.name)
+        testcase.set('time', str(self.time))
+        for f in self.failures:
+            f.xml(testcase)
+        for e in self.errors:
+            e.xml(testcase)
         
 class Result(object):
     __slots__ = ['name', 'num_errors', 'num_failures', 'num_tests', \
@@ -201,13 +213,19 @@ class Result(object):
         """
         @return: document as unicode (UTF-8 declared) XML according to Ant JUnit spec
         """
-        return u'<?xml version="1.0" encoding="utf-8"?>'+\
-               '<testsuite name="%s" tests="%s" errors="%s" failures="%s" time="%s">'%\
-               (self.name, self.num_tests, self.num_errors, self.num_failures, self.time)+\
-               '\n'.join([tc.xml() for tc in self.test_case_results])+\
-               '  <system-out><![CDATA[%s]]></system-out>'%self.system_out+\
-               '  <system-err><![CDATA[%s]]></system-err>'%self.system_err+\
-               '</testsuite>'
+        testsuite = ET.Element('testsuite')
+        testsuite.set('tests', str(self.num_tests))
+        testsuite.set('failures', str(self.num_failures))
+        testsuite.set('time', str(self.time))
+        testsuite.set('errors', str(self.num_errors))
+        testsuite.set('name', self.name)
+        for tc in self.test_case_results:
+            tc.xml(testsuite) 
+        system_out = ET.SubElement(testsuite, 'system-out')
+        system_out.text = ET.CDATA(filter_nonprintable_text(self.system_out))
+        system_err = ET.SubElement(testsuite, 'system-err')
+        system_err.text = ET.CDATA(filter_nonprintable_text(self.system_err))
+        return ET.tostring(testsuite, encoding='utf-8', method='xml')
 
 def _text(tag):
     return reduce(lambda x, y: x + y, [c.data for c in tag.childNodes if c.nodeType in [DomNode.TEXT_NODE, DomNode.CDATA_SECTION_NODE]], "").strip()
@@ -391,23 +409,24 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     @param stdout: stdout data to include in report
     @type  stdout: str
     """
-    if not stdout:
-      return """<?xml version="1.0" encoding="UTF-8"?>
-<testsuite tests="1" failures="1" time="1" errors="0" name="%s">
-  <testcase name="test_ran" status="run" time="1" classname="Results">
-  <failure message="%s" type=""/>
-  </testcase>
-</testsuite>"""%(test_name, message)
-    else:
-      return """<?xml version="1.0" encoding="UTF-8"?>
-<testsuite tests="1" failures="1" time="1" errors="0" name="%s">
-  <testcase name="test_ran" status="run" time="1" classname="Results">
-  <failure message="%s" type=""/>
-  </testcase>
-  <system-out><![CDATA[[
-%s
-]]></system-out>
-</testsuite>"""%(test_name, message, stdout)
+    testsuite = ET.Element('testsuite')
+    testsuite.set('tests', '1')
+    testsuite.set('failures', '1')
+    testsuite.set('time', '1')
+    testsuite.set('errors', '0')
+    testsuite.set('name', test_name)
+    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase.set('name', 'test_ran')
+    testcase.set('status', 'run')
+    testcase.set('time', '1')
+    testcase.set('classname', 'Results')
+    failure = ET.SubElement(testcase, 'failure')
+    failure.set('message', message)
+    failure.set('type', '')
+    if stdout:
+        system_out = ET.SubElement(testsuite, 'system-out')
+        system_out.text = ET.CDATA(filter_nonprintable_text(stdout))
+    return ET.tostring(testsuite, encoding='utf8', method='xml')
 
 def test_success_junit_xml(test_name):
     """
@@ -416,11 +435,18 @@ def test_success_junit_xml(test_name):
     @param test_name: Name of test that passed
     @type  test_name: str
     """
-    return """<?xml version="1.0" encoding="UTF-8"?>
-<testsuite tests="1" failures="0" time="1" errors="0" name="%s">
-  <testcase name="test_ran" status="run" time="1" classname="Results">
-  </testcase>
-</testsuite>"""%(test_name)
+    testsuite = ET.Element('testsuite')
+    testsuite.set('tests', '1')
+    testsuite.set('failures', '0')
+    testsuite.set('time', '1')
+    testsuite.set('errors', '0')
+    testsuite.set('name', test_name)
+    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase.set('name', 'test_ran')
+    testcase.set('status', 'run')
+    testcase.set('time', '1')
+    testcase.set('classname', 'Results')
+    return ET.tostring(testsuite, encoding='utf8', method='xml')
 
 def print_summary(junit_results, runner_name='ROSUNIT'):
     """

@@ -155,7 +155,5 @@ def create_xml_runner(test_pkg, test_name, results_file=None, is_rostest=False):
         raise Exception("ERROR: cannot run test suite, file is preventing creation of test dir: %s"%test_dir)
     
     print("[ROSUNIT] Outputting test results to " + results_file)
-    outstream = open(results_file, 'w')
-    outstream.write('<?xml version="1.0" encoding="utf-8"?>\n')
-    return XMLTestRunner(stream=outstream)
+    return XMLTestRunner(result_file=results_file)
     
