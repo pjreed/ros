@@ -229,7 +229,7 @@ class Result(object):
         system_out.text = ET.CDATA(filter_nonprintable_text(self.system_out))
         system_err = ET.SubElement(testsuite, 'system-err')
         system_err.text = ET.CDATA(filter_nonprintable_text(self.system_err))
-        return ET.tostring(testsuite, encoding='utf-8', method='xml')
+        return ET.tostring(testsuite, encoding='utf-8', method='xml', xml_declaration=True, pretty_print=True)
 
 def _text(tag):
     return reduce(lambda x, y: x + y, [c.data for c in tag.childNodes if c.nodeType in [DomNode.TEXT_NODE, DomNode.CDATA_SECTION_NODE]], "").strip()
@@ -441,7 +441,7 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     if stdout:
         system_out = ET.SubElement(testsuite, 'system-out')
         system_out.text = ET.CDATA(filter_nonprintable_text(stdout))
-    return ET.tostring(testsuite, encoding='utf8', method='xml')
+    return ET.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
 
 def test_success_junit_xml(test_name):
     """
@@ -461,7 +461,7 @@ def test_success_junit_xml(test_name):
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    return ET.tostring(testsuite, encoding='utf8', method='xml')
+    return ET.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
 
 def print_summary(junit_results, runner_name='ROSUNIT'):
     """

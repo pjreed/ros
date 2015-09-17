@@ -169,7 +169,7 @@ class _XMLTestResult(unittest.TestResult):
         system_err = ET.SubElement(test_suite, 'system-err')
         system_err.text = ET.CDATA(self.filter_nonprintable_text(err))
         tree = ET.ElementTree(test_suite)
-        tree.write(report_file)
+        tree.write(report_file, encoding='utf-8', pretty_print=True, xml_declaration=True)
 
     def print_report_text(self, stream, time_taken, out, err):
         """Prints the text report to the supplied stream.
