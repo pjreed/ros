@@ -46,7 +46,7 @@ import string
 import codecs
 import re
 
-import xml.etree.ElementTree as ET
+import lxml.etree as ET
 from xml.dom.minidom import parse, parseString
 from xml.dom import Node as DomNode
 
