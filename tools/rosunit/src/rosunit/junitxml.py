@@ -93,7 +93,7 @@ else:
     raise RuntimeError("Don't know how to monkeypatch CDATA support.")
 
 
-def filter_nonprintable_text(self, text):
+def filter_nonprintable_text(text):
     return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
 
 class TestInfo(object):
