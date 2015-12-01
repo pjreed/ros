@@ -15,12 +15,13 @@ import sys
 import time
 import traceback
 import unittest
+import xml.etree.ElementTree as etree
 try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 from xml.sax.saxutils import escape
-import lxml.etree as ET
+from .junitxml import CDATA
 
 
 class _TestInfo(object):
@@ -164,12 +165,12 @@ class _XMLTestResult(unittest.TestResult):
         test_suite.set('time', '%.3f' % time_taken)
         for info in self._tests:
             info.print_report(test_suite)
-        system_out = ET.SubElement(test_suite, 'system-out')
-        system_out.text = ET.CDATA(self.filter_nonprintable_text(out))
-        system_err = ET.SubElement(test_suite, 'system-err')
-        system_err.text = ET.CDATA(self.filter_nonprintable_text(err))
-        tree = ET.ElementTree(test_suite)
-        tree.write(report_file, encoding='utf-8', pretty_print=True, xml_declaration=True)
+        system_out = etree.SubElement(test_suite, 'system-out')
+        system_out.append(CDATA(out))
+        system_err = etree.SubElement(test_suite, 'system-err')
+        system_err.append(CDATA(err))
+        tree = etree.ElementTree(test_suite)
+        tree.write(report_file, encoding='utf-8')
 
     def print_report_text(self, stream, time_taken, out, err):
         """Prints the text report to the supplied stream.
