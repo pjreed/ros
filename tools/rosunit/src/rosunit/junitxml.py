@@ -458,7 +458,7 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     failure.set('type', '')
     if stdout:
         system_out = etree.SubElement(testsuite, 'system-out')
-        system_out.text = CDATA(stdout)
+        system_out.append(CDATA(stdout))
     return etree.tostring(testsuite, encoding='utf8')
 
 def test_success_junit_xml(test_name):
