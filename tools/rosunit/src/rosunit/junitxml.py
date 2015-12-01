@@ -40,17 +40,15 @@ Library for reading and manipulating Ant JUnit XML result files.
 from __future__ import print_function
 
 import os
-import sys
 try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
-import string
 import codecs
 import re
 import xml.etree.ElementTree as etree
 
-from xml.dom.minidom import parse, parseString
+from xml.dom.minidom import parseString
 from xml.dom import Node as DomNode
 
 from functools import reduce
@@ -64,14 +62,21 @@ def CDATA(text=None):
     element.text = text
     return element
 
-def filter_nonprintable_text(text):
-    return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
+
+invalid_chars = re.compile(ur'[^\x09\x0A\x0D\x20-\x7E\x85\xA0-\xFF\u0100-\uD7FF\uE000-\uFDCF\uFDE0-\uFFFD]')
+
+
+def escapeInvalidXML(xml):
+    def replacer(m):
+        return "&#x"+('%04X' % ord(m.group(0)))+";"
+    return re.sub(invalid_chars, replacer, xml)
 
 etree._original_serialize_xml = etree._serialize_xml
 
+
 def _serialize_xml(write, elem, *args):
     if elem.tag == '![CDATA[':
-        write("<![CDATA[%s]]>" % filter_nonprintable_text(elem.text))
+        write("<![CDATA[%s]]>" % escapeInvalidXML(elem.text))
         return
     return etree._original_serialize_xml(write, elem, *args)
 etree._serialize_xml = etree._serialize['xml'] = _serialize_xml

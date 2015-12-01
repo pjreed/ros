@@ -9,7 +9,6 @@ from __future__ import print_function
 
 __revision__ = "$Id$"
 
-import os.path
 import re
 import sys
 import time
