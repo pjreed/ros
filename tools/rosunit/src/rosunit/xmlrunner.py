@@ -62,7 +62,7 @@ class _TestInfo(object):
         supplied stream.
 
         """
-        testcase = ET.SubElement(testsuite, "testcase")
+        testcase = etree.SubElement(testsuite, "testcase")
         testcase.set('classname', self._class)
         testcase.set('name', self._method)
         testcase.set('time', '%.4f' % self._time)
@@ -90,7 +90,7 @@ class _TestInfo(object):
 
     def _print_error(self, testcase, tagname, error):
         """Print information from a failure or error to the supplied stream."""
-        error = ET.SubElement(testcase, tagname)
+        error = etree.SubElement(testcase, tagname)
         error.set('type', str(error[0].__name__))
         tb_stream = StringIO()
         traceback.print_tb(error[2], None, tb_stream)
@@ -157,7 +157,7 @@ class _XMLTestResult(unittest.TestResult):
         output and standard error streams must be passed in.a
 
         """
-        test_suite = ET.Element('testsuite')
+        test_suite = etree.Element('testsuite')
         test_suite.set('errors', str(len(self.errors)))
         test_suite.set('failures', str(len(self.failures)))
         test_suite.set('name', self._test_name)

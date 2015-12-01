@@ -93,7 +93,7 @@ class TestError(TestInfo):
     'error' result container        
     """
     def xml(self, testcase):
-        error = ET.SubElement(testcase, 'error')
+        error = etree.SubElement(testcase, 'error')
         error.set('type', self.type)
         error.append(CDATA(self.text))
 
@@ -102,7 +102,7 @@ class TestFailure(TestInfo):
     'failure' result container        
     """
     def xml(self, testcase):
-        error = ET.SubElement(testcase, 'failure')
+        error = etree.SubElement(testcase, 'failure')
         error.set('type', self.type)
         error.append(CDATA(self.text))
 
@@ -181,7 +181,7 @@ class TestCaseResult(object):
         self.errors.append(error)
 
     def xml(self, testsuite):
-        testcase = ET.SubElement(testsuite, 'testcase')
+        testcase = etree.SubElement(testsuite, 'testcase')
         testcase.set('classname', self.classname)
         testcase.set('name', self.name)
         testcase.set('time', str(self.time))
@@ -231,7 +231,7 @@ class Result(object):
         """
         @return: document as unicode (UTF-8 declared) XML according to Ant JUnit spec
         """
-        testsuite = ET.Element('testsuite')
+        testsuite = etree.Element('testsuite')
         testsuite.set('tests', str(self.num_tests))
         testsuite.set('failures', str(self.num_failures))
         testsuite.set('time', str(self.time))
@@ -427,18 +427,18 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     @param stdout: stdout data to include in report
     @type  stdout: str
     """
-    testsuite = ET.Element('testsuite')
+    testsuite = etree.Element('testsuite')
     testsuite.set('tests', '1')
     testsuite.set('failures', '1')
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase = etree.Subelement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    failure = ET.SubElement(testcase, 'failure')
+    failure = etree.SubElement(testcase, 'failure')
     failure.set('message', message)
     failure.set('type', '')
     if stdout:
@@ -453,18 +453,18 @@ def test_success_junit_xml(test_name):
     @param test_name: Name of test that passed
     @type  test_name: str
     """
-    testsuite = ET.Element('testsuite')
+    testsuite = etree.Element('testsuite')
     testsuite.set('tests', '1')
     testsuite.set('failures', '0')
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase = etree.Subelement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    return ET.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
+    return etree.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
 
 def print_summary(junit_results, runner_name='ROSUNIT'):
     """
