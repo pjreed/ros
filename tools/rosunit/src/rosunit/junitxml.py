@@ -48,6 +48,7 @@ except ImportError:
 import string
 import codecs
 import re
+import xml.etree.ElementTree as etree
 
 from xml.dom.minidom import parse, parseString
 from xml.dom import Node as DomNode
@@ -56,45 +57,25 @@ from functools import reduce
 import rospkg
 
 
-try:
-    import xml.etree.ElementTree as etree
-except ImportError:
-    import elementtree.ElementTree as etree
-
-
-# Oh the joys of monkeypatching...
-# We need a CDATA element, but ElementTree doesn't support it
+# We need to print CDATA elements, but Python's built-in ElementTree doesn't
+# support it.  So, we get to monkey patch it in.
 def CDATA(text=None):
     element = etree.Element('![CDATA[')
     element.text = text
     return element
 
-# Python 2.7 and 3
-if hasattr(etree, '_serialize_xml'):
-    etree._original_serialize_xml = etree._serialize_xml
-
-    def _serialize_xml(write, elem, *args):
-        if elem.tag == '![CDATA[':
-            write("%s%s" % (elem.tag, elem.text))
-            return
-        return etree._original_serialize_xml(write, elem, *args)
-    etree._serialize_xml = etree._serialize['xml'] = _serialize_xml
-# Python 2.5-2.6, and non-stdlib ElementTree
-elif hasattr(etree.ElementTree, '_write'):
-    etree.ElementTree._orig_write = etree.ElementTree._write
-
-    def _write(self, file, node, encoding, namespaces):
-        if node.tag == '![CDATA[':
-            file.write("\n<![CDATA[%s]]>\n" % node.text.encode(encoding))
-        else:
-            self._orig_write(file, node, encoding, namespaces)
-    etree.ElementTree._write = _write
-else:
-    raise RuntimeError("Don't know how to monkeypatch CDATA support.")
-
-
 def filter_nonprintable_text(text):
     return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
+
+etree._original_serialize_xml = etree._serialize_xml
+
+def _serialize_xml(write, elem, *args):
+    if elem.tag == '![CDATA[':
+        write("<![CDATA[%s]]>" % filter_nonprintable_text(elem.text))
+        return
+    return etree._original_serialize_xml(write, elem, *args)
+etree._serialize_xml = etree._serialize['xml'] = _serialize_xml
+
 
 class TestInfo(object):
     """
@@ -118,7 +99,7 @@ class TestError(TestInfo):
     def xml(self, testcase):
         error = etree.SubElement(testcase, 'error')
         error.set('type', self.type)
-        error.text = CDATA(filter_nonprintable_text(self.text))
+        error.append(CDATA(self.text))
 
 class TestFailure(TestInfo):
     """
@@ -127,7 +108,7 @@ class TestFailure(TestInfo):
     def xml(self, testcase):
         error = etree.SubElement(testcase, 'failure')
         error.set('type', self.type)
-        error.text = CDATA(filter_nonprintable_text(self.text))
+        error.append(CDATA(self.text))
 
 
 class TestCaseResult(object):
@@ -263,9 +244,9 @@ class Result(object):
         for tc in self.test_case_results:
             tc.xml(testsuite) 
         system_out = etree.SubElement(testsuite, 'system-out')
-        system_out.text = CDATA(filter_nonprintable_text(self.system_out))
+        system_out.append(CDATA(self.system_out))
         system_err = etree.SubElement(testsuite, 'system-err')
-        system_err.text = CDATA(filter_nonprintable_text(self.system_err))
+        system_err.append(CDATA(self.system_err))
         return etree.tostring(testsuite, encoding='utf-8')
 
 def _text(tag):
@@ -477,7 +458,7 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     failure.set('type', '')
     if stdout:
         system_out = etree.SubElement(testsuite, 'system-out')
-        system_out.text = CDATA(filter_nonprintable_text(stdout))
+        system_out.text = CDATA(stdout)
     return etree.tostring(testsuite, encoding='utf8')
 
 def test_success_junit_xml(test_name):

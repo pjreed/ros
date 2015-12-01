@@ -15,39 +15,13 @@ import sys
 import time
 import traceback
 import unittest
-try:
-    import xml.etree.ElementTree as etree
-except ImportError:
-    import elementtree.ElementTree as etree
+import xml.etree.ElementTree as etree
 try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 from xml.sax.saxutils import escape
-from .junitxml import filter_nonprintable_text, CDATA
-
-# Python 2.7 and 3
-if hasattr(etree, '_serialize_xml'):
-    etree._original_serialize_xml = etree._serialize_xml
-
-    def _serialize_xml(write, elem, *args):
-        if elem.tag == '![CDATA[':
-            write("%s%s" % (elem.tag, elem.text))
-            return
-        return etree._original_serialize_xml(write, elem, *args)
-    etree._serialize_xml = etree._serialize['xml'] = _serialize_xml
-# Python 2.5-2.6, and non-stdlib ElementTree
-elif hasattr(etree.ElementTree, '_write'):
-    etree.ElementTree._orig_write = etree.ElementTree._write
-
-    def _write(self, file, node, encoding, namespaces):
-        if node.tag == '![CDATA[':
-            file.write("\n<![CDATA[%s]]>\n" % node.text.encode(encoding))
-        else:
-            self._orig_write(file, node, encoding, namespaces)
-    etree.ElementTree._write = _write
-else:
-    raise RuntimeError("Don't know how to monkeypatch CDATA support.")
+from .junitxml import CDATA
 
 
 class _TestInfo(object):
@@ -189,9 +163,9 @@ class _XMLTestResult(unittest.TestResult):
         for info in self._tests:
             info.print_report(test_suite)
         system_out = etree.SubElement(test_suite, 'system-out')
-        system_out.text = CDATA(filter_nonprintable_text(out))
+        system_out.append(CDATA(out))
         system_err = etree.SubElement(test_suite, 'system-err')
-        system_err.text = CDATA(filter_nonprintable_text(err))
+        system_err.append(CDATA(err))
         tree = etree.ElementTree(test_suite)
         tree.write(report_file, encoding='utf-8')
 
