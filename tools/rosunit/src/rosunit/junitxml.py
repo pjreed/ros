@@ -49,12 +49,28 @@ import string
 import codecs
 import re
 
-import xml.etree.ElementTree as ET
+import xml.etree as etree
 from xml.dom.minidom import parse, parseString
 from xml.dom import Node as DomNode
 
 from functools import reduce
 import rospkg
+
+
+def CDATA(text=None):
+    element = etree.Element(CDATA)
+    element.text = text
+    return element
+
+
+class ElementTreeCDATA(etree.ElementTree):
+    def _write(self, file, node, encoding, namespaces):
+        if node.tag is CDATA:
+            text = node.text.encode(encoding)
+            file.write("\n<![CDATA[%s]]>\n" % text)
+        else:
+            etree.ElementTree._write(self, file, node, encoding, namespaces)
+
 
 def filter_nonprintable_text(self, text):
     return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
@@ -79,18 +95,18 @@ class TestError(TestInfo):
     'error' result container        
     """
     def xml(self, testcase):
-        error = ET.SubElement(testcase, 'error')
+        error = ElementTreeCDATA.SubElement(testcase, 'error')
         error.set('type', self.type)
-        error.text = ET.CDATA(filter_nonprintable_text(self.text))
+        error.text = CDATA(filter_nonprintable_text(self.text))
 
 class TestFailure(TestInfo):
     """
     'failure' result container        
     """
     def xml(self, testcase):
-        error = ET.SubElement(testcase, 'failure')
+        error = ElementTreeCDATA.SubElement(testcase, 'failure')
         error.set('type', self.type)
-        error.text = ET.CDATA(filter_nonprintable_text(self.text))
+        error.text = CDATA(filter_nonprintable_text(self.text))
 
 
 class TestCaseResult(object):
@@ -167,7 +183,7 @@ class TestCaseResult(object):
         self.errors.append(error)
 
     def xml(self, testsuite):
-        testcase = ET.SubElement(testsuite, 'testcase')
+        testcase = ElementTreeCDATA.SubElement(testsuite, 'testcase')
         testcase.set('classname', self.classname)
         testcase.set('name', self.name)
         testcase.set('time', str(self.time))
@@ -217,7 +233,7 @@ class Result(object):
         """
         @return: document as unicode (UTF-8 declared) XML according to Ant JUnit spec
         """
-        testsuite = ET.Element('testsuite')
+        testsuite = ElementTreeCDATA.Element('testsuite')
         testsuite.set('tests', str(self.num_tests))
         testsuite.set('failures', str(self.num_failures))
         testsuite.set('time', str(self.time))
@@ -225,11 +241,11 @@ class Result(object):
         testsuite.set('name', self.name)
         for tc in self.test_case_results:
             tc.xml(testsuite) 
-        system_out = ET.SubElement(testsuite, 'system-out')
-        system_out.text = ET.CDATA(filter_nonprintable_text(self.system_out))
-        system_err = ET.SubElement(testsuite, 'system-err')
-        system_err.text = ET.CDATA(filter_nonprintable_text(self.system_err))
-        return ET.tostring(testsuite, encoding='utf-8', method='xml', xml_declaration=True, pretty_print=True)
+        system_out = ElementTreeCDATA.SubElement(testsuite, 'system-out')
+        system_out.text = CDATA(filter_nonprintable_text(self.system_out))
+        system_err = ElementTreeCDATA.SubElement(testsuite, 'system-err')
+        system_err.text = CDATA(filter_nonprintable_text(self.system_err))
+        return ElementTreeCDATA.tostring(testsuite, encoding='utf-8')
 
 def _text(tag):
     return reduce(lambda x, y: x + y, [c.data for c in tag.childNodes if c.nodeType in [DomNode.TEXT_NODE, DomNode.CDATA_SECTION_NODE]], "").strip()
@@ -424,24 +440,24 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     @param stdout: stdout data to include in report
     @type  stdout: str
     """
-    testsuite = ET.Element('testsuite')
+    testsuite = ElementTreeCDATA.Element('testsuite')
     testsuite.set('tests', '1')
     testsuite.set('failures', '1')
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase = ElementTreeCDATA.SubElement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    failure = ET.SubElement(testcase, 'failure')
+    failure = ElementTreeCDATA.SubElement(testcase, 'failure')
     failure.set('message', message)
     failure.set('type', '')
     if stdout:
-        system_out = ET.SubElement(testsuite, 'system-out')
-        system_out.text = ET.CDATA(filter_nonprintable_text(stdout))
-    return ET.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
+        system_out = ElementTreeCDATA.SubElement(testsuite, 'system-out')
+        system_out.text = CDATA(filter_nonprintable_text(stdout))
+    return ElementTreeCDATA.tostring(testsuite, encoding='utf8')
 
 def test_success_junit_xml(test_name):
     """
@@ -450,18 +466,18 @@ def test_success_junit_xml(test_name):
     @param test_name: Name of test that passed
     @type  test_name: str
     """
-    testsuite = ET.Element('testsuite')
+    testsuite = ElementTreeCDATA.Element('testsuite')
     testsuite.set('tests', '1')
     testsuite.set('failures', '0')
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = ET.Subelement(testsuite, 'testcase')
+    testcase = ElementTreeCDATA.SubElement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    return ET.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
+    return ElementTreeCDATA.tostring(testsuite, encoding='utf-8')
 
 def print_summary(junit_results, runner_name='ROSUNIT'):
     """

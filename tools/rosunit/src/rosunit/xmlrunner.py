@@ -20,7 +20,7 @@ try:
 except ImportError:
     from io import StringIO
 from xml.sax.saxutils import escape
-import lxml.etree as ET
+from .junitxml import ElementTreeCDATA, CDATA, filter_nonprintable_text
 
 
 class _TestInfo(object):
@@ -61,7 +61,7 @@ class _TestInfo(object):
         supplied stream.
 
         """
-        testcase = ET.SubElement(testsuite, "testcase")
+        testcase = ElementTreeCDATA.SubElement(testsuite, "testcase")
         testcase.set('classname', self._class)
         testcase.set('name', self._method)
         testcase.set('time', '%.4f' % self._time)
@@ -89,7 +89,7 @@ class _TestInfo(object):
 
     def _print_error(self, testcase, tagname, error):
         """Print information from a failure or error to the supplied stream."""
-        error = ET.SubElement(testcase, tagname)
+        error = ElementTreeCDATA.SubElement(testcase, tagname)
         error.set('type', str(error[0].__name__))
         tb_stream = StringIO()
         traceback.print_tb(error[2], None, tb_stream)
@@ -146,9 +146,6 @@ class _XMLTestResult(unittest.TestResult):
         unittest.TestResult.addFailure(self, test, err)
         self._failure = err
 
-    def filter_nonprintable_text(self, text):
-        return re.sub(u'[^\u0020-\uD7FF\u0009\u000A\u000D\uE000-\uFFFD\u10000-\u10FFFF]+', '', text)
-
     def print_report(self, report_file, time_taken, out, err):
         """Prints the XML report to the supplied stream.
         
@@ -156,7 +153,7 @@ class _XMLTestResult(unittest.TestResult):
         output and standard error streams must be passed in.a
 
         """
-        test_suite = ET.Element('testsuite')
+        test_suite = ElementTreeCDATA.Element('testsuite')
         test_suite.set('errors', str(len(self.errors)))
         test_suite.set('failures', str(len(self.failures)))
         test_suite.set('name', self._test_name)
@@ -164,12 +161,12 @@ class _XMLTestResult(unittest.TestResult):
         test_suite.set('time', '%.3f' % time_taken)
         for info in self._tests:
             info.print_report(test_suite)
-        system_out = ET.SubElement(test_suite, 'system-out')
-        system_out.text = ET.CDATA(self.filter_nonprintable_text(out))
-        system_err = ET.SubElement(test_suite, 'system-err')
-        system_err.text = ET.CDATA(self.filter_nonprintable_text(err))
-        tree = ET.ElementTree(test_suite)
-        tree.write(report_file, encoding='utf-8', pretty_print=True, xml_declaration=True)
+        system_out = ElementTreeCDATA.SubElement(test_suite, 'system-out')
+        system_out.text = CDATA(filter_nonprintable_text(out))
+        system_err = ElementTreeCDATA.SubElement(test_suite, 'system-err')
+        system_err.text = CDATA(filter_nonprintable_text(err))
+        tree = ElementTreeCDATA.ElementTree(test_suite)
+        tree.write(report_file, encoding='utf-8')
 
     def print_report_text(self, stream, time_taken, out, err):
         """Prints the text report to the supplied stream.
