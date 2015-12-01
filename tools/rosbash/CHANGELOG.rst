@@ -2,6 +2,20 @@
 Changelog for package rosbash
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.11.11 (2015-10-13)
+--------------------
+* rosrun: allow spaces in command names and search paths (`#94 <https://github.com/ros/ros/pull/94>`_)
+
+1.11.10 (2015-10-12)
+--------------------
+* fix zsh rosservice completion (`#92 <https://github.com/ros/ros/pull/92>`_)
+
+1.11.9 (2015-09-19)
+-------------------
+* fix roslaunch completion if path contains white spaces (`ros/ros_comm#658 <https://github.com/ros/ros_comm/issues/658>`_)
+* add rosconsole tab completion for bash (`#86 <https://github.com/ros/ros/pull/86>`_)
+* use --first-only option when calling catkin_find (`#83 <https://github.com/ros/ros/issues/83>`_)
+
 1.11.8 (2015-04-27)
 -------------------
 
