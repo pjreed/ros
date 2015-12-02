@@ -439,7 +439,7 @@ def test_failure_junit_xml(test_name, message, stdout=None):
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = etree.Subelement(testsuite, 'testcase')
+    testcase = etree.SubElement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
@@ -465,12 +465,12 @@ def test_success_junit_xml(test_name):
     testsuite.set('time', '1')
     testsuite.set('errors', '0')
     testsuite.set('name', test_name)
-    testcase = etree.Subelement(testsuite, 'testcase')
+    testcase = etree.SubElement(testsuite, 'testcase')
     testcase.set('name', 'test_ran')
     testcase.set('status', 'run')
     testcase.set('time', '1')
     testcase.set('classname', 'Results')
-    return etree.tostring(testsuite, encoding='utf8', method='xml', xml_declaration=True, pretty_print=True)
+    return etree.tostring(testsuite, encoding='utf8')
 
 def print_summary(junit_results, runner_name='ROSUNIT'):
     """
